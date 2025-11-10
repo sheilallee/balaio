@@ -1,0 +1,342 @@
+package com.balaio.controller.web;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.balaio.model.Item;
+import com.balaio.model.Lista;
+import com.balaio.model.Usuario;
+import com.balaio.service.ItemService;
+import com.balaio.service.ListaService;
+
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/balaio/listas")
+public class ListaWebController {
+
+    @Autowired
+    private ListaService listaService;
+
+    @Autowired
+    private ItemService itemService;
+
+    @Autowired
+    private com.balaio.service.UsuarioService usuarioService;
+
+    private static final Logger logger = LoggerFactory.getLogger(ListaWebController.class);
+
+    @GetMapping
+    public String listarListas(HttpSession session, Model model) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        List<Lista> listas = listaService.listarListasDoUsuario(usuario.getId());
+        model.addAttribute("listas", listas);
+        model.addAttribute("usuario", usuario);
+        return "listas/index";
+    }
+
+    @GetMapping("/nova")
+    public String novaListaPage(HttpSession session, Model model) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        model.addAttribute("lista", new Lista());
+        model.addAttribute("usuario", usuario);
+        return "listas/nova";
+    }
+
+    @PostMapping("/nova")
+    public String criarLista(@RequestParam String titulo,
+                             @RequestParam String descricao,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            listaService.criarLista(titulo, descricao, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Lista criada com sucesso!");
+            return "redirect:/balaio/listas";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao criar lista: " + e.getMessage());
+            return "redirect:/balaio/listas/nova";
+        }
+    }
+
+    @GetMapping("/{id}")
+    public String verLista(@PathVariable Long id, HttpSession session, Model model) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            Lista lista = listaService.buscarPorId(id).orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+            model.addAttribute("lista", lista);
+            model.addAttribute("usuario", usuario);
+            // usar ItemService para aplicar verificação de acesso e ordenação
+        List<Item> itens = itemService.listarItensDaLista(id, usuario.getId());
+        logger.debug("Recuperados {} itens para a lista {}", itens.size(), id);
+        java.math.BigDecimal totalEstimado = itens.stream()
+            .filter(i -> i.getValor() != null)
+            .map(i -> i.getValor().multiply(java.math.BigDecimal.valueOf(i.getQuantidade())))
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        long totalComprados = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.COMPRADO).count();
+        long totalPendentes = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.PENDENTE).count();
+        model.addAttribute("itens", itens);
+        model.addAttribute("novoItem", new Item());
+        model.addAttribute("totalEstimado", totalEstimado);
+        model.addAttribute("totalComprados", totalComprados);
+        model.addAttribute("totalPendentes", totalPendentes);
+            return "listas/detalhes";
+        } catch (Exception e) {
+            return "redirect:/balaio/listas";
+        }
+    }
+
+    @PostMapping("/{id}/itens")
+    public String adicionarItem(@PathVariable Long id,
+                               @ModelAttribute Item novoItem,
+                               HttpSession session,
+                               RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            itemService.criarItem(novoItem.getNomeProduto(), novoItem.getQuantidade(), novoItem.getValor(), id, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Item adicionado com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao adicionar item: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas/" + id;
+    }
+
+    @PostMapping("/{listaId}/itens/{itemId}/toggle")
+    public String toggleItemStatus(@PathVariable Long listaId,
+                                   @PathVariable Long itemId,
+                                   HttpSession session,
+                                   RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            Item item = itemService.buscarPorId(itemId).orElseThrow(() -> new RuntimeException("Item não encontrado"));
+            if (item.getStatus() == Item.StatusItem.COMPRADO) {
+                itemService.marcarComoPendente(itemId, usuario.getId());
+            } else {
+                itemService.marcarComoComprado(itemId, usuario.getId());
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar item: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas/" + listaId;
+    }
+
+    @PostMapping("/{listaId}/itens/{itemId}/deletar")
+    public String deletarItem(@PathVariable Long listaId,
+                              @PathVariable Long itemId,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            itemService.excluirItem(itemId, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Item excluído com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao excluir item: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas/" + listaId;
+    }
+
+    @GetMapping("/{listaId}/itens/{itemId}/editar")
+    public String editarItemPage(@PathVariable Long listaId,
+                                 @PathVariable Long itemId,
+                                 HttpSession session,
+                                 Model model,
+                                 RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            Item item = itemService.buscarPorId(itemId).orElseThrow(() -> new RuntimeException("Item não encontrado"));
+            model.addAttribute("item", item);
+            model.addAttribute("listaId", listaId);
+            model.addAttribute("usuario", usuario);
+            return "listas/editarItem";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro: " + e.getMessage());
+            return "redirect:/balaio/listas/" + listaId;
+        }
+    }
+
+    @PostMapping("/{listaId}/itens/{itemId}/editar")
+    public String editarItem(@PathVariable Long listaId,
+                             @PathVariable Long itemId,
+                             @RequestParam String nomeProduto,
+                             @RequestParam Integer quantidade,
+                             @RequestParam(required = false) java.math.BigDecimal valor,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            itemService.atualizarItem(itemId, nomeProduto, quantidade, valor, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Item atualizado com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar item: " + e.getMessage());
+        }
+        return "redirect:/balaio/listas/" + listaId;
+    }
+
+    @PostMapping("/{id}/deletar")
+    public String deletarLista(@PathVariable Long id,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            listaService.excluirLista(id, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Lista deletada com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao deletar lista: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas";
+    }
+
+    @PostMapping("/{id}/compartilhar")
+    public String compartilharLista(@PathVariable Long id,
+                                     @RequestParam String email,
+                                     HttpSession session,
+                                     RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            listaService.compartilharLista(id, email, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Lista compartilhada com sucesso com " + email);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao compartilhar lista: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas";
+    }
+
+    // Endpoint adicional para requisições AJAX/JSON do mesmo path
+    @PostMapping(path = "/{id}/compartilhar", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<?> compartilharListaAjax(@PathVariable Long id,
+                                                   @RequestBody java.util.Map<String, String> body,
+                                                   HttpSession session) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        // se não houver usuário na sessão, tentar SecurityContext (autenticação)
+        if (usuario == null) {
+            org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+                String emailAut = authentication.getName();
+                usuario = usuarioService.buscarPorEmail(emailAut).orElse(null);
+            }
+        }
+
+        if (usuario == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(java.util.Map.of("erro", "Usuário não autenticado"));
+        }
+
+        String email = body.get("emailColaborador");
+        try {
+            Lista lista = listaService.compartilharLista(id, email, usuario.getId());
+            java.util.Map<String, Object> resp = new java.util.HashMap<>();
+            resp.put("mensagem", "Lista compartilhada com sucesso com " + email);
+            resp.put("lista", java.util.Map.of("id", lista.getId(), "titulo", lista.getTitulo()));
+            return ResponseEntity.ok(resp);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/editar")
+    public String editarListaPage(@PathVariable Long id, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            Lista lista = listaService.buscarPorId(id).orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+            // verificar permissão
+            if (!lista.getProprietario().getId().equals(usuario.getId())) {
+                redirectAttributes.addFlashAttribute("erro", "Apenas o proprietário pode editar a lista");
+                return "redirect:/balaio/listas";
+            }
+            model.addAttribute("lista", lista);
+            model.addAttribute("usuario", usuario);
+            return "listas/editar";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro: " + e.getMessage());
+            return "redirect:/balaio/listas";
+        }
+    }
+
+    @PostMapping("/{id}/editar")
+    public String editarLista(@PathVariable Long id,
+                              @RequestParam String titulo,
+                              @RequestParam String descricao,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuario == null) {
+            return "redirect:/balaio/login";
+        }
+
+        try {
+            listaService.atualizarLista(id, titulo, descricao, usuario.getId());
+            redirectAttributes.addFlashAttribute("sucesso", "Lista atualizada com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar lista: " + e.getMessage());
+        }
+
+        return "redirect:/balaio/listas";
+    }
+}
