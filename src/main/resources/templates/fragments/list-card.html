@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"/></head>
+<body>
+
+<div th:fragment="listCard(resumo)">
+    <div th:if="${resumo != null}"
+         class="relative group bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer"
+         th:onclick="|openList(${resumo.id})|">
+
+        <!-- botão de editar (agora apenas dispara o modal global) -->
+        <button
+                type="button"
+                class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transform group-hover:translate-y-0 transition-opacity duration-200 p-2 rounded-full hover:bg-gray-100"
+                title="Editar lista"
+                th:attr="data-id=${resumo.id},data-title=${resumo.titulo},data-desc=${resumo.descricao}"
+                onclick="event.stopPropagation(); openGlobalEditModalFromButton(this);">
+            <i class="fas fa-pen text-gray-600"></i>
+        </button>
+
+        <a th:href="@{/balaio/listas/{id}(id=${resumo.id})}" class="block no-underline text-inherit">
+            <h3 class="text-lg font-bold mb-1" th:text="${resumo.titulo}">Título da lista</h3>
+
+            <p class="text-sm text-gray-600 mb-4"
+               th:text="${(resumo.descricao != null and resumo.descricao != '') ? resumo.descricao : '— sem descrição —'}">
+                Descrição
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-2">
+                        <span class="text-gray-600">Progresso</span>
+                        <span class="font-medium"
+                              th:text="${percent != null} ? ${#numbers.formatDecimal(percent, 0, 'COMMA', 0, 'POINT')} + '%' : '-'">-</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2"
+                         th:with="percent=${resumo.totalItens > 0 ? (resumo.totalComprados * 100.0 / resumo.totalItens) : 0}">
+                        <div class="bg-amber-500 h-2 rounded-full"
+                             th:style="'width:' + ${percent} + '%'">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600">Itens</span>
+                    <span class="font-medium" th:text="${resumo.totalComprados} + ' / ' + ${resumo.totalItens}">0 / 0</span>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

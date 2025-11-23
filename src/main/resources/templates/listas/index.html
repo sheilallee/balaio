@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,4 +10,255 @@
 </head>
 <body>
 <div th:replace="fragments/header :: header(${usuario})"></div>
+
+<main class="max-w-6xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 mb-2">Total de Listas</div>
+            <div class="text-3xl font-bold" id="totalLists">0</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 mb-2">Total Gasto</div>
+            <div class="text-3xl font-bold text-green-600" id="totalSpent">R$ 0,00</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 mb-2">Itens Comprados</div>
+            <div class="text-3xl font-bold" id="totalItems">0</div>
+        </div>
+    </div>
+
+    <!-- Listas -->
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold">Minhas Listas</h2>
+
+        <button
+                onclick="openCreateListModal()"
+                class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors"
+        >
+            <i class="fas fa-plus"></i>
+            Nova Lista
+        </button>
+    </div>
+
+    <div id="listsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div th:each="res : ${listasResumo}">
+            <div th:if="${res != null}">
+                <div th:insert="~{fragments/list-card :: listCard(resumo=${res})}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- mostrar quando não houver listas -->
+    <div th:if="${listasResumo == null or #lists.isEmpty(listasResumo)}"
+         class="bg-white rounded-lg shadow p-12 text-center">
+        <i class="fas fa-shopping-basket text-gray-400 text-6xl mb-4"></i>
+        <h3 class="text-xl font-bold mb-2">Nenhuma lista ainda</h3>
+        <p class="text-gray-600 mb-6">
+            Crie sua primeira lista de compras para começar
+        </p>
+        <button
+                onclick="openCreateListModal()"
+                class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-md inline-flex items-center gap-2 transition-colors"
+        >
+            <i class="fas fa-plus"></i>
+            Criar Lista
+        </button>
+    </div>
+</main>
+
+<!-- Modal: Criar Nova Lista -->
+<div id="createListModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9000]">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <h2 class="text-xl font-bold mb-2">Criar Nova Lista</h2>
+            <p class="text-gray-600 text-sm mb-4">
+                Crie uma nova lista de compras.
+            </p>
+
+            <form th:action="@{/balaio/listas/nova}" th:object="${lista}" method="post" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="listTitle" class="block text-sm font-medium">Título</label>
+                    <input
+                            type="text"
+                            th:field="*{titulo}"
+                            id="listTitle"
+                            placeholder="Ex: Compras do mês"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="listDescription" class="block text-sm font-medium">Descrição (opcional)</label>
+                    <textarea
+                            th:field="*{descricao}"
+                            id="listDescription"
+                            placeholder="Adicione uma descrição..."
+                            rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    ></textarea>
+                </div>
+
+                <div class="flex gap-2 justify-end">
+                    <button
+                            type="button"
+                            onclick="closeCreateListModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                            type="submit"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors"
+                    >
+                        Criar Lista
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: editar lista -->
+<div id="globalEditModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Editar lista</h2>
+                <button type="button" id="globalEditClose" class="p-1">
+                    <i class="fas fa-times text-gray-600"></i>
+                </button>
+            </div>
+
+            <form id="globalEditForm" method="post" class="space-y-4">
+                <div>
+                    <label for="globalTitulo" class="block text-sm font-medium">Título</label>
+                    <input id="globalTitulo" name="titulo" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+
+                <div>
+                    <label for="globalDescricao" class="block text-sm font-medium">Descrição</label>
+                    <textarea id="globalDescricao" name="descricao" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div class="flex justify-between items-center gap-2">
+                    <button type="button" id="globalOpenConfirmDelete"
+                            class="px-3 py-2 border border-red-400 text-red-600 rounded-md hover:bg-red-50">
+                        Excluir lista
+                    </button>
+
+                    <div class="ml-auto flex gap-2">
+                        <button type="button" id="globalEditCancel"
+                                class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md">
+                            Salvar alterações
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: excluir lista -->
+<div id="globalConfirmDelete" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+    <div class="bg-white rounded-lg shadow-xl max-w-sm w-full">
+        <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">Confirmar exclusão</h3>
+            <p class="text-sm text-gray-600 mb-4">Você tem certeza que deseja excluir a lista "<span id="globalConfirmListTitle"></span>"? Essa ação é permanente.</p>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" id="globalConfirmCancel" class="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                    Cancelar
+                </button>
+
+                <form id="globalConfirmForm" method="post">
+                    <button type="submit" class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        Sim, excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openCreateListModal() {
+        document.getElementById('createListModal').classList.remove('hidden');
+    }
+    function closeCreateListModal() {
+        document.getElementById('createListModal').classList.add('hidden');
+    }
+    document.getElementById('createListModal').addEventListener('click', function(e) {
+        if (e.target === this) closeCreateListModal();
+    });
+
+    function openGlobalEditModalFromButton(btn) {
+        // btn tem data-id, data-title, data-desc
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title') || '';
+        const desc = btn.getAttribute('data-desc') || '';
+
+        document.getElementById('globalTitulo').value = title;
+        document.getElementById('globalDescricao').value = desc;
+
+        const form = document.getElementById('globalEditForm');
+        form.action = `/balaio/listas/${id}/editar`;
+
+        document.getElementById('globalOpenConfirmDelete').setAttribute('data-id', id);
+        document.getElementById('globalOpenConfirmDelete').setAttribute('data-title', title);
+
+        document.getElementById('globalEditModal').classList.remove('hidden');
+    }
+
+    document.getElementById('globalEditClose').addEventListener('click', () => {
+        document.getElementById('globalEditModal').classList.add('hidden');
+    });
+    document.getElementById('globalEditCancel').addEventListener('click', () => {
+        document.getElementById('globalEditModal').classList.add('hidden');
+    });
+
+    document.getElementById('globalEditModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
+
+    document.getElementById('globalOpenConfirmDelete').addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const title = this.getAttribute('data-title') || '';
+        openConfirmDelete(id, title);
+        document.getElementById('globalEditModal').classList.add('hidden');
+    });
+
+    function openConfirmDelete(id, title) {
+        document.getElementById('globalConfirmListTitle').textContent = title;
+        const form = document.getElementById('globalConfirmForm');
+        form.action = `/balaio/listas/${id}/deletar`;
+        document.getElementById('globalConfirmDelete').classList.remove('hidden');
+    }
+
+    document.getElementById('globalConfirmCancel').addEventListener('click', () => {
+        document.getElementById('globalConfirmDelete').classList.add('hidden');
+    });
+
+    document.getElementById('globalConfirmDelete').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+    });
+
+    function openList(listId) {
+        window.location.href = `/balaio/listas/${listId}`; // ajustado para rota Thymeleaf padrão
+    }
+
+    function logout() {
+        window.location.href = '/api/auth/logout';
+    }
+</script>
+
 </body>
+</html>

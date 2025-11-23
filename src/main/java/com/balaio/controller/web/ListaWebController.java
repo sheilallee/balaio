@@ -1,5 +1,6 @@
 package com.balaio.controller.web;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -49,8 +50,22 @@ public class ListaWebController {
         }
 
         List<Lista> listas = listaService.listarListasDoUsuario(usuario.getId());
+
+        List<com.balaio.dto.ListaResumoDTO> listasResumo = new ArrayList<>();
+        for (Lista l : listas) {
+            List<Item> itens = itemService.listarItensDaLista(l.getId(), usuario.getId());
+            int totalItens = itens != null ? itens.size() : 0;
+            int totalComprados = itens != null ? (int) itens.stream().filter(i -> i.getStatus() == Item.StatusItem.COMPRADO).count() : 0;
+
+            listasResumo.add(new com.balaio.dto.ListaResumoDTO(
+                    l.getId(), l.getTitulo(), l.getDescricao(), totalItens, totalComprados
+            ));
+        }
+
+        model.addAttribute("listasResumo", listasResumo);
         model.addAttribute("listas", listas);
         model.addAttribute("usuario", usuario);
+        model.addAttribute("lista", new Lista());
         return "listas/index";
     }
 
@@ -77,12 +92,12 @@ public class ListaWebController {
         }
 
         try {
-            listaService.criarLista(titulo, descricao, usuario.getId());
+            Lista criada = listaService.criarLista(titulo, descricao, usuario.getId());
             redirectAttributes.addFlashAttribute("sucesso", "Lista criada com sucesso!");
-            return "redirect:/balaio/listas";
+            return "redirect:/balaio/listas/" + criada.getId();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", "Erro ao criar lista: " + e.getMessage());
-            return "redirect:/balaio/listas/nova";
+            return "redirect:/balaio/listas";
         }
     }
 
