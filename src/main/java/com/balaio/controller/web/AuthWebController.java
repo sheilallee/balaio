@@ -146,6 +146,6 @@ public class AuthWebController {
             model.addAttribute("itensCompradosTotal", 0);
             model.addAttribute("listasCompartilhadasCount", 0);
         }
-        return "dashboard/index";
+        return "redirect:/balaio/listas";
     }
 }

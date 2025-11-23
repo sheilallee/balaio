@@ -19,3 +19,5 @@ Thumbs.db
 
 # Others
 /.env
+/src/main/resources/application.properties
+
