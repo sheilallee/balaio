@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Fragmentos</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body>
+<header th:fragment="header(usuario)" class="bg-white border-b shadow-sm sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-500 p-2 rounded-lg">
+                <i class="fas fa-shopping-basket text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold">Balaio</h1>
+                <p class="text-sm text-gray-600">
+                    Olá,
+                    <span th:text="${usuario.nomeCompleto}">Usuário</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a th:href="@{/balaio/perfil}"
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                <i class="fas fa-user text-gray-600"></i>
+            </a>
+            <a th:href="@{/balaio/logout}"
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                <i class="fas fa-sign-out-alt text-gray-600"></i>
+            </a>
+        </div>
+    </div>
+</header>
+</body>
+</html>
