@@ -45,8 +45,9 @@ public class ItemController {
             Integer quantidade = (Integer) dados.get("quantidade");
             BigDecimal valor = dados.get("valor") != null ? 
                 new BigDecimal(dados.get("valor").toString()) : null;
+            String unidade = (String) dados.get("unidade"); 
 
-            Item item = itemService.criarItem(nomeProduto, quantidade, valor, listaId, usuarioId);
+            Item item = itemService.criarItem(nomeProduto, quantidade, valor, unidade, listaId, usuarioId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("mensagem", "Item criado com sucesso");
@@ -147,8 +148,9 @@ public class ItemController {
             Integer quantidade = (Integer) dados.get("quantidade");
             BigDecimal valor = dados.get("valor") != null ? 
                 new BigDecimal(dados.get("valor").toString()) : null;
+            String unidade = (String) dados.get("unidade"); 
 
-            Item item = itemService.atualizarItem(itemId, nomeProduto, quantidade, valor, usuarioId);
+            Item item = itemService.atualizarItem(itemId, nomeProduto, quantidade, valor, unidade, usuarioId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("mensagem", "Item atualizado com sucesso");
@@ -260,6 +262,7 @@ public class ItemController {
         mapa.put("nomeProduto", item.getNomeProduto());
         mapa.put("quantidade", item.getQuantidade());
         mapa.put("valor", item.getValor());
+        mapa.put("unidade", item.getUnidade());
         mapa.put("status", item.getStatus().toString());
         mapa.put("dataCriacao", item.getDataCriacao());
         mapa.put("dataAtualizacao", item.getDataAtualizacao());

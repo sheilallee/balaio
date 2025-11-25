@@ -1,17 +1,18 @@
 package com.balaio.service;
 
-import com.balaio.model.Item;
-import com.balaio.model.Lista;
-import com.balaio.repository.ItemRepository;
-import com.balaio.repository.ListaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.balaio.model.Item;
+import com.balaio.model.Lista;
+import com.balaio.repository.ItemRepository;
+import com.balaio.repository.ListaRepository;
 
 @Service
 @Transactional
@@ -26,7 +27,7 @@ public class ItemService {
     @Autowired
     private ListaService listaService;
 
-    public Item criarItem(String nomeProduto, Integer quantidade, BigDecimal valor, Long listaId, Long usuarioId) {
+    public Item criarItem(String nomeProduto, Integer quantidade, BigDecimal valor, String unidade, Long listaId, Long usuarioId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
@@ -39,6 +40,7 @@ public class ItemService {
         item.setNomeProduto(nomeProduto);
         item.setQuantidade(quantidade);
         item.setValor(valor);
+        item.setUnidade(unidade);
         item.setLista(lista);
         item.setStatus(Item.StatusItem.PENDENTE);
         item.setDataCriacao(LocalDateTime.now());
@@ -69,7 +71,7 @@ public class ItemService {
         return itemRepository.findById(id);
     }
 
-    public Item atualizarItem(Long id, String nomeProduto, Integer quantidade, BigDecimal valor, Long usuarioId) {
+    public Item atualizarItem(Long id, String nomeProduto, Integer quantidade, BigDecimal valor, String unidade, Long usuarioId) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item não encontrado"));
 
@@ -81,6 +83,7 @@ public class ItemService {
         item.setNomeProduto(nomeProduto);
         item.setQuantidade(quantidade);
         item.setValor(valor);
+        item.setUnidade(unidade);
         item.setDataAtualizacao(LocalDateTime.now());
 
         return itemRepository.save(item);
