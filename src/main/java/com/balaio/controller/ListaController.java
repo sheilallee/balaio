@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -210,6 +211,26 @@ public class ListaController {
             Long usuarioId = getCurrentUserId();
             
             Lista lista = listaService.removerColaborador(listaId, colaboradorId, usuarioId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensagem", "Colaborador removido com sucesso");
+            response.put("lista", criarMapaLista(lista));
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("erro", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @DeleteMapping("/{listaId}/colaboradores/email")
+    public ResponseEntity<?> removerColaboradorPorEmail(@PathVariable Long listaId, 
+                                                    @RequestParam String email) {
+        try {
+            Long usuarioId = getCurrentUserId();
+            
+            Lista lista = listaService.removerColaboradorPorEmail(listaId, email, usuarioId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("mensagem", "Colaborador removido com sucesso");

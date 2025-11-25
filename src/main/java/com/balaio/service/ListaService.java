@@ -142,6 +142,29 @@ public class ListaService {
         return listaRepository.save(lista);
     }
 
+    public Lista removerColaboradorPorEmail(Long listaId, String emailColaborador, Long proprietarioId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        // Verificar se o usuário é o proprietário
+        if (!lista.getProprietario().getId().equals(proprietarioId)) {
+            throw new RuntimeException("Apenas o proprietário pode remover colaboradores");
+        }
+
+        String emailNormalized = emailColaborador.trim().toLowerCase();
+        
+        Usuario colaborador = lista.getColaboradores().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(emailNormalized))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Colaborador não encontrado nesta lista"));
+
+        lista.getColaboradores().remove(colaborador);
+        lista.setDataAtualizacao(LocalDateTime.now());
+
+        return listaRepository.save(lista);
+    }
+
+
     public boolean usuarioTemAcesso(Long listaId, Long usuarioId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));

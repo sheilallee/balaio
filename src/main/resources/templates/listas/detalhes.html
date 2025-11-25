@@ -92,8 +92,8 @@
             </div>
         </div>
 
-        <!-- Lista de itens -->
-        <div class="space-y-4">
+
+        <div class="space-y-4 mb-6">  
 
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-bold">Itens da Lista</h2>
@@ -122,7 +122,6 @@
                             </button>
                         </form>
 
-                        <!-- CONTEÚDO DO ITEM QUE ESTAVA FALTANDO -->
                         <div class="flex-1" th:classappend="${item.status.name() == 'COMPRADO'} ? ' line-through text-gray-500' : ''">
                             <div class="flex items-baseline gap-2">
                                 <span class="font-medium">[[${item.nomeProduto}]]</span>
@@ -151,6 +150,97 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+
+        <!-- ---Colaboradores--- -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6"
+            th:if="${usuarioLogado != null and lista.proprietario?.id == usuarioLogado.id}">
+
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-users"></i>
+                    Colaboradores da Lista
+                </h2>
+                <span class="text-sm text-gray-500">
+                    [[${lista.colaboradores != null ? lista.colaboradores.size() : 0}]] colaborador(es)
+                </span>
+            </div>
+
+            <!-- Lista de colaboradores -->
+            <div class="space-y-3 mb-4">
+
+                <!-- Dono -->
+                <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-crown text-amber-500"></i>
+                        <div>
+                            <span class="font-medium">[[${lista.proprietario?.nomeCompleto}]]</span>
+                            <span class="text-sm text-gray-500 ml-2">(Você - Dono)</span>
+                        </div>
+                    </div>
+                    <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Proprietário</span>
+                </div>
+
+                <!-- Colaboradores -->
+                <div th:if="${lista.colaboradores != null && !lista.colaboradores.empty}">
+                    <div th:each="colaborador : ${lista.colaboradores}"
+                        class="flex items-center justify-between p-3 border rounded-lg">
+
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-user text-gray-500"></i>
+                            <div>
+                                <span class="font-medium">[[${colaborador?.nomeCompleto}]]</span>
+                                <div class="text-sm text-gray-500 colaborador-email">
+                                    [[${colaborador?.email}]]
+                                </div>
+                            </div>
+                        </div>
+
+                        <button th:attr="data-lista-id=${lista.id}, data-colaborador-email=${colaborador?.email}"
+                                onclick="openConfirmRemoveCollaboratorModal(this)" 
+                                class="text-red-600 hover:text-red-800 p-2 rounded-md transition-colors"
+                                title="Remover colaborador">
+                            <i class="fas fa-trash"></i>
+                        </button>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Formulário para adicionar colaborador -->
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-medium mb-3">Adicionar Colaborador</h3>
+
+                <form th:action="@{'/balaio/listas/' + ${lista.id} + '/compartilhar'}"
+                    method="POST"
+                    class="flex gap-2"
+                    onsubmit="return validarEmail(this)">
+                    
+                    <input type="email"
+                        name="email"
+                        placeholder="Digite o e-mail do colaborador"
+                        required
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500">
+
+                    <button type="submit"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
+                        Adicionar
+                    </button>
+
+                </form>
+
+                <p class="text-sm text-gray-500 mt-2">
+                    O colaborador poderá adicionar, editar e marcar itens.
+                </p>
+
+            </div>
+
+        </div>
+
+
 
     <!-- Modal: Adicionar Item -->
     <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -391,8 +481,39 @@
         </div>
     </div>
 
+    <!-- Modal: Confirmar Remoção de Colaborador -->
+    <div id="confirmRemoveCollaboratorModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div class="p-6">
+                <h3 class="text-lg font-bold mb-2">Remover Colaborador</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Tem certeza que deseja remover 
+                    "<span id="confirmCollaboratorName" class="font-medium"></span>" 
+                    (<span id="confirmCollaboratorEmail" class="font-medium"></span>) 
+                    da lista?
+                </p>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeConfirmRemoveCollaboratorModal()" 
+                            class="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="confirmRemoveCollaborator()" 
+                            class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                        Sim, remover
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentDeleteItemId = null;
+        let currentCollaboratorToRemove = {
+            listaId: null,
+            email: null,
+            nome: null
+        };
 
         // Dropdown menu
         function toggleMenu() {
@@ -407,6 +528,100 @@
                 menu.classList.add('hidden');
             }
         });
+
+        // ========== MODAL DE REMOVER COLABORADOR ==========
+        function openConfirmRemoveCollaboratorModal(buttonElement) {
+            const listaId = buttonElement.getAttribute('data-lista-id');
+            const email = buttonElement.getAttribute('data-colaborador-email');
+            const nome = buttonElement.closest('.flex.items-center.justify-between').querySelector('.font-medium').textContent;
+            
+            currentCollaboratorToRemove = {
+                listaId: listaId,
+                email: email,
+                nome: nome.trim()
+            };
+            
+            document.getElementById('confirmCollaboratorName').textContent = nome;
+            document.getElementById('confirmCollaboratorEmail').textContent = email;
+            document.getElementById('confirmRemoveCollaboratorModal').classList.remove('hidden');
+        }
+
+        function closeConfirmRemoveCollaboratorModal() {
+            document.getElementById('confirmRemoveCollaboratorModal').classList.add('hidden');
+            currentCollaboratorToRemove = { listaId: null, email: null, nome: null };
+        }
+
+        function confirmRemoveCollaborator() {
+            const { listaId, email } = currentCollaboratorToRemove;
+            
+            if (!listaId || !email) return;
+            
+            fetch(`/api/listas/${listaId}/colaboradores/email?email=${encodeURIComponent(email)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    showMessage('Colaborador removido com sucesso!', 'success');
+                    closeConfirmRemoveCollaboratorModal();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    response.json().then(data => {
+                        showMessage(data.erro || 'Erro ao remover colaborador', 'error');
+                        closeConfirmRemoveCollaboratorModal();
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showMessage('Erro ao remover colaborador', 'error');
+                closeConfirmRemoveCollaboratorModal();
+            });
+        }
+
+        // Função auxiliar para mostrar mensagens
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 p-4 rounded-md z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        function validarEmail(form) {
+            const email = form.email.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!emailRegex.test(email)) {
+                showMessage('Por favor, insira um e-mail válido', 'error');
+                return false;
+            }
+            
+            // Verificar se não está tentando adicionar a si mesmo
+            const usuarioLogadoEmail = '[[${usuarioLogado.email}]]';
+            if (email.toLowerCase() === usuarioLogadoEmail.toLowerCase()) {
+                showMessage('Você não pode adicionar você mesmo como colaborador', 'error');
+                return false;
+            }
+            
+            // Verificar se já não é colaborador
+            const colaboradores = document.querySelectorAll('.colaborador-email');
+            for (let colab of colaboradores) {
+                if (colab.textContent.trim().toLowerCase() === email.toLowerCase()) {
+                    showMessage('Este e-mail já é um colaborador da lista', 'error');
+                    return false;
+                }
+            }
+            
+            return true;
+        }
 
         // Modais
         function openAddItemModal() {
@@ -482,14 +697,26 @@
         }
 
         // Fechar modais ao clicar fora
-        const modals = ['addItemModal', 'editListModal', 'shareModal', 'deleteListModal', 'deleteItemModal'];
+        const modals = [
+            'addItemModal', 
+            'editListModal', 
+            'shareModal', 
+            'deleteListModal', 
+            'deleteItemModal',
+            'confirmRemoveCollaboratorModal'  // ← ADICIONADO O NOVO MODAL
+        ];
+        
         modals.forEach(modalId => {
-            document.getElementById(modalId).addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.add('hidden');
-                }
-            });
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            }
         });
     </script>
+
 </body>
 </html>

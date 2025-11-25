@@ -109,8 +109,24 @@ public class ListaWebController {
 
         try {
             Lista lista = listaService.buscarPorId(id).orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+            System.out.println("=== CARREGANDO LISTA ===");
+            System.out.println("Lista ID: " + lista.getId());
+            System.out.println("Lista Título: " + lista.getTitulo());
+            System.out.println("Proprietário: " + (lista.getProprietario() != null ? lista.getProprietario().getEmail() : "NULL"));
+            System.out.println("Usuário logado: " + usuario.getEmail());
+            System.out.println("Número de colaboradores: " + (lista.getColaboradores() != null ? lista.getColaboradores().size() : 0));
+                
+            if (lista.getColaboradores() != null && !lista.getColaboradores().isEmpty()) {
+                for (Usuario colab : lista.getColaboradores()) {
+                    System.out.println("Colaborador: " + colab.getEmail() + " - " + colab.getNomeCompleto());
+                }
+            } else {
+                System.out.println("Nenhum colaborador encontrado");
+            }
+
             model.addAttribute("lista", lista);
             model.addAttribute("usuario", usuario);
+            model.addAttribute("usuarioLogado", usuario);
             
             List<Item> itens = itemService.listarItensDaLista(id, usuario.getId());
             logger.debug("Recuperados {} itens para a lista {}", itens.size(), id);
@@ -136,7 +152,6 @@ public class ListaWebController {
             long totalPendentes = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.PENDENTE).count();
 
             
-            // CORREÇÃO DA BARRA DE PROGRESSO
             String progressoWidth;
             String percentualTexto;
 
@@ -326,19 +341,29 @@ public class ListaWebController {
                                      @RequestParam String email,
                                      HttpSession session,
                                      RedirectAttributes redirectAttributes) {
+        System.out.println("=== CONTROLLER COMPARTILHAR ===");
+        System.out.println("Lista ID: " + id);
+        System.out.println("Email recebido: " + email);
+                                            
         Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
         if (usuario == null) {
+            System.out.println("ERRO: Usuário não logado");
             return "redirect:/balaio/login";
         }
 
+        System.out.println("Usuário logado: " + usuario.getEmail());
+        System.out.println("Usuário ID: " + usuario.getId());
+        
         try {
             listaService.compartilharLista(id, email, usuario.getId());
             redirectAttributes.addFlashAttribute("sucesso", "Lista compartilhada com sucesso com " + email);
+            System.out.println("SUCESSO: Redirecionando para lista " + id);
         } catch (Exception e) {
+            System.out.println("ERRO no compartilhamento: " + e.getMessage());
             redirectAttributes.addFlashAttribute("erro", "Erro ao compartilhar lista: " + e.getMessage());
         }
 
-        return "redirect:/balaio/listas";
+            return "redirect:/balaio/listas/" + id;
     }
 
     // Endpoint adicional para requisições AJAX/JSON do mesmo path
