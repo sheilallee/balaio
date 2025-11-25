@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -112,29 +111,75 @@ public class ListaWebController {
             Lista lista = listaService.buscarPorId(id).orElseThrow(() -> new RuntimeException("Lista não encontrada"));
             model.addAttribute("lista", lista);
             model.addAttribute("usuario", usuario);
-            // usar ItemService para aplicar verificação de acesso e ordenação
-        List<Item> itens = itemService.listarItensDaLista(id, usuario.getId());
-        logger.debug("Recuperados {} itens para a lista {}", itens.size(), id);
-        java.math.BigDecimal totalEstimado = itens.stream()
-            .filter(i -> i.getValor() != null)
-            .map(i -> i.getValor().multiply(java.math.BigDecimal.valueOf(i.getQuantidade())))
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-        long totalComprados = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.COMPRADO).count();
-        long totalPendentes = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.PENDENTE).count();
-        model.addAttribute("itens", itens);
-        model.addAttribute("novoItem", new Item());
-        model.addAttribute("totalEstimado", totalEstimado);
-        model.addAttribute("totalComprados", totalComprados);
-        model.addAttribute("totalPendentes", totalPendentes);
+            
+            List<Item> itens = itemService.listarItensDaLista(id, usuario.getId());
+            logger.debug("Recuperados {} itens para a lista {}", itens.size(), id);
+            
+            java.math.BigDecimal totalEstimado = java.math.BigDecimal.ZERO;
+            for (Item item : itens) {
+                if (item.getStatus() == Item.StatusItem.COMPRADO && 
+                    item.getValor() != null && 
+                    item.getQuantidade() != null) {
+                    try {
+                        java.math.BigDecimal valorTotalItem = item.getValor().multiply(
+                            java.math.BigDecimal.valueOf(item.getQuantidade())
+                        );
+                        totalEstimado = totalEstimado.add(valorTotalItem);
+                    } catch (Exception e) {
+                        logger.warn("Erro ao calcular valor do item {} ({}): {}", 
+                                item.getId(), item.getNomeProduto(), e.getMessage());
+                    }
+                }
+            }
+            
+            long totalComprados = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.COMPRADO).count();
+            long totalPendentes = itens.stream().filter(i -> i.getStatus() == Item.StatusItem.PENDENTE).count();
+
+            
+            // CORREÇÃO DA BARRA DE PROGRESSO
+            String progressoWidth;
+            String percentualTexto;
+
+            if ((totalComprados + totalPendentes) > 0) {
+                double percentual = (totalComprados * 100.0) / (totalComprados + totalPendentes);
+                
+                // Garantir que não passe de 100%
+                percentual = Math.min(percentual, 100.0);
+                
+                // Remove a casa decimal se for .0
+                if (percentual % 1 == 0) {
+                    percentualTexto = String.format("%.0f", percentual);
+                } else {
+                    percentualTexto = String.format("%.1f", percentual).replace(".", ",");
+                }
+                progressoWidth = percentualTexto + "%";
+            } else {
+                progressoWidth = "0%";
+                percentualTexto = "0";
+            }
+        
+            model.addAttribute("progressoWidth", progressoWidth);
+            model.addAttribute("percentualTexto", percentualTexto);
+            model.addAttribute("itens", itens);
+            model.addAttribute("novoItem", new Item());
+            model.addAttribute("totalEstimado", totalEstimado);
+            model.addAttribute("totalComprados", totalComprados);
+            model.addAttribute("totalPendentes", totalPendentes);
+            
             return "listas/detalhes";
         } catch (Exception e) {
+            logger.error("Erro ao carregar lista {}: {}", id, e.getMessage());
             return "redirect:/balaio/listas";
         }
     }
 
     @PostMapping("/{id}/itens")
     public String adicionarItem(@PathVariable Long id,
-                               @ModelAttribute Item novoItem,
+                                @RequestParam String nomeProduto,
+                                @RequestParam Integer quantidade,
+                                @RequestParam(required = false) String unidade,  
+                                @RequestParam(required = false) java.math.BigDecimal valor,
+                               
                                HttpSession session,
                                RedirectAttributes redirectAttributes) {
         Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
@@ -143,7 +188,8 @@ public class ListaWebController {
         }
 
         try {
-            itemService.criarItem(novoItem.getNomeProduto(), novoItem.getQuantidade(), novoItem.getValor(), id, usuario.getId());
+            itemService.criarItem(nomeProduto, quantidade, valor, unidade, id, usuario.getId());
+            //itemService.criarItem(novoItem.getNomeProduto(), novoItem.getQuantidade(), novoItem.getValor(), id, usuario.getId());
             redirectAttributes.addFlashAttribute("sucesso", "Item adicionado com sucesso!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", "Erro ao adicionar item: " + e.getMessage());
@@ -154,9 +200,9 @@ public class ListaWebController {
 
     @PostMapping("/{listaId}/itens/{itemId}/toggle")
     public String toggleItemStatus(@PathVariable Long listaId,
-                                   @PathVariable Long itemId,
-                                   HttpSession session,
-                                   RedirectAttributes redirectAttributes) {
+                                @PathVariable Long itemId,
+                                HttpSession session,
+                                RedirectAttributes redirectAttributes) {
         Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
         if (usuario == null) {
             return "redirect:/balaio/login";
@@ -164,12 +210,26 @@ public class ListaWebController {
 
         try {
             Item item = itemService.buscarPorId(itemId).orElseThrow(() -> new RuntimeException("Item não encontrado"));
+            
+            // LOG PARA DEBUG
+            logger.info("Toggle item - ID: {}, Status atual: {}, Usuário: {}", 
+                    itemId, item.getStatus(), usuario.getId());
+            
+            Item itemAtualizado;
             if (item.getStatus() == Item.StatusItem.COMPRADO) {
-                itemService.marcarComoPendente(itemId, usuario.getId());
+                itemAtualizado = itemService.marcarComoPendente(itemId, usuario.getId());
+                logger.info("Item {} marcado como PENDENTE", itemId);
             } else {
-                itemService.marcarComoComprado(itemId, usuario.getId());
+                itemAtualizado = itemService.marcarComoComprado(itemId, usuario.getId());
+                logger.info("Item {} marcado como COMPRADO", itemId);
             }
+            
+            // LOG para verificar se foi salvo
+            logger.info("Item atualizado - Status: {}", itemAtualizado.getStatus());
+            
+            redirectAttributes.addFlashAttribute("sucesso", "Status do item atualizado!");
         } catch (Exception e) {
+            logger.error("Erro ao atualizar item {}: {}", itemId, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar item: " + e.getMessage());
         }
 
@@ -224,6 +284,7 @@ public class ListaWebController {
                              @PathVariable Long itemId,
                              @RequestParam String nomeProduto,
                              @RequestParam Integer quantidade,
+                             @RequestParam(required = false) String unidade, 
                              @RequestParam(required = false) java.math.BigDecimal valor,
                              HttpSession session,
                              RedirectAttributes redirectAttributes) {
@@ -233,7 +294,7 @@ public class ListaWebController {
         }
 
         try {
-            itemService.atualizarItem(itemId, nomeProduto, quantidade, valor, usuario.getId());
+            itemService.atualizarItem(itemId, nomeProduto, quantidade, valor, unidade, usuario.getId());
             redirectAttributes.addFlashAttribute("sucesso", "Item atualizado com sucesso!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar item: " + e.getMessage());

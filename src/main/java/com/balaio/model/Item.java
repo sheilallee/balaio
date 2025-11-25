@@ -42,6 +42,10 @@ public class Item {
     @Column(precision = 10, scale = 2)
     private BigDecimal valor;
 
+    @Size(max = 10, message = "Unidade deve ter no máximo 10 caracteres")
+    @Column(length = 10)
+    private String unidade; 
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusItem status = StatusItem.PENDENTE;
@@ -63,7 +67,7 @@ public class Item {
     public Item() {
     }
 
-    public Item(String nomeProduto, Integer quantidade, Lista lista) {
+    public Item(String nomeProduto, Integer quantidade, String unidade, Lista lista) {
         this.nomeProduto = nomeProduto;
         this.quantidade = quantidade;
         this.lista = lista;
@@ -144,5 +148,13 @@ public class Item {
 
     public void setLista(Lista lista) {
         this.lista = lista;
+    }
+
+    public String getUnidade() {
+        return unidade;
+    }
+
+    public void setUnidade(String unidade) {
+        this.unidade = unidade;
     }
 }

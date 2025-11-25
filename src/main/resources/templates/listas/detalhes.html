@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balaio - Detalhes da Lista</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+    <!-- Header -->
+    <header class="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between mb-4">
+                <button onclick="goBack()" class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-md transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar
+                </button>
+                
+                <div class="relative">
+                    <button onclick="toggleMenu()" class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border">
+                        <button onclick="openEditListModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                            <i class="fas fa-pencil-alt text-sm"></i>
+                            Editar lista
+                        </button>
+                        <button onclick="openShareModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                            <i class="fas fa-share-alt text-sm"></i>
+                            Compartilhar
+                        </button>
+                        <hr class="my-1">
+                        <button onclick="confirmDeleteList()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                            <i class="fas fa-trash text-sm"></i>
+                            Excluir lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h1 class="text-2xl font-bold mb-1" id="listTitle">
+                    [[${lista.titulo}]]
+                </h1>
+                <p class="text-gray-600" id="listDescription">
+                    [[${lista.descricao}]]
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+            <!-- PROGRESSO -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600 mb-2">Progresso</div>
+
+                <div class="text-2xl font-bold mb-2">
+                    <span th:text="${percentualTexto} + '%'">0%</span>
+                </div>
+
+                <div class="w-full bg-gray-200 rounded-full h-2 relative overflow-hidden">
+                    <div class="bg-amber-500 h-2 rounded-full absolute top-0 left-0 transition-all duration-300" 
+                        th:style="'width: ' + ${percentualTexto} + '%; max-width: 100%;'">
+                    </div>
+                </div>
+            </div>
+
+           <!-- TOTAL GASTO -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600 mb-2">Total Gasto</div>
+                <div class="text-2xl font-bold text-green-600">
+                    R$ <span th:text="${#numbers.formatDecimal(totalEstimado, 1, 2)}">0,00</span>
+                </div>
+                <div class="text-xs text-gray-600 mt-1">
+                    Itens comprados: <span th:text="${totalComprados}"></span>
+                </div>
+            </div>
+
+            <!-- ITENS -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-600 mb-2">Itens</div>
+                <div class="text-2xl font-bold">
+                    <span th:text="${totalComprados}"></span> /
+                    <span th:text="${totalComprados + totalPendentes}"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de itens -->
+        <div class="space-y-4">
+
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold">Itens da Lista</h2>
+
+                <!-- Botão de abrir modal -->
+                <button
+                    onclick="openAddItemModal()"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    Adicionar Item
+                </button>
+            </div>
+
+            <!-- Container de itens -->
+            <div id="itemsContainer" class="space-y-2">
+                <div th:each="item : ${itens}" class="bg-white rounded-lg shadow p-4">
+                    <div class="flex items-start gap-3">
+                        <form th:action="@{'/balaio/listas/' + ${lista.id} + '/itens/' + ${item.id} + '/toggle'}" 
+                            method="post" 
+                            class="inline">
+                            <button type="submit" class="bg-transparent border-none p-0">
+                                <input type="checkbox"
+                                    th:checked="${item.status.name() == 'COMPRADO'}"
+                                    onclick="this.form.submit()"
+                                    class="mt-1 w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500"/>
+                            </button>
+                        </form>
+
+                        <!-- CONTEÚDO DO ITEM QUE ESTAVA FALTANDO -->
+                        <div class="flex-1" th:classappend="${item.status.name() == 'COMPRADO'} ? ' line-through text-gray-500' : ''">
+                            <div class="flex items-baseline gap-2">
+                                <span class="font-medium">[[${item.nomeProduto}]]</span>
+                                <span class="text-sm text-gray-600">
+                                    [[${item.quantidade}]] [[${item.unidade}]]
+                                </span>
+                            </div>
+
+                            <div class="text-sm text-green-600 mt-1">
+                                R$ [[${#numbers.formatDecimal(item.valor, 1, 2)}]]
+                            </div>
+                        </div>
+
+                        <div class="flex gap-1">
+                            <a th:href="@{'/balaio/listas/' + ${lista.id} + '/itens/' + ${item.id} + '/editar'}"
+                            class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                                <i class="fas fa-pencil-alt text-sm"></i>
+                            </a>
+
+                            <form th:action="@{'/balaio/listas/' + ${lista.id} + '/itens/' + ${item.id} + '/deletar'}" method="post">
+                                <button class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                                    <i class="fas fa-trash text-sm text-red-600"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    <!-- Modal: Adicionar Item -->
+    <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h2 class="text-xl font-bold mb-2">Adicionar Item</h2>
+                <p class="text-gray-600 text-sm mb-4">
+                    Adicione um novo item à sua lista de compras
+                </p>
+
+                <form th:action="@{'/balaio/listas/' + ${lista.id} + '/itens'}" method="POST" class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="itemName" class="block text-sm font-medium">Nome do produto</label>
+                        <input
+                            type="text"
+                            id="itemName"
+                            name="nomeProduto" 
+                            placeholder="Ex: Arroz"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label for="quantity" class="block text-sm font-medium">Quantidade</label>
+                            <input
+                                type="number"
+                                step="1"
+                                id="quantity"
+                                name="quantidade" 
+                                placeholder="1"
+                                value="1"
+                                min="1"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label for="unit" class="block text-sm font-medium">Unidade</label>
+                            <select  
+                                id="unit"
+                                name="unidade"  
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            >
+                                <option value="un">un</option>
+                                <option value="kg">kg</option>
+                                <option value="L">L</option>
+                                <option value="g">g</option>
+                                <option value="ml">ml</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="price" class="block text-sm font-medium">Preço (R$)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            id="price"
+                            name="valor" 
+                            placeholder="0.00"
+                            min="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                    </div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button
+                            type="button"
+                            onclick="closeAddItemModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors"
+                        >
+                            Adicionar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Lista -->
+    <div id="editListModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h2 class="text-xl font-bold mb-2">Editar Lista</h2>
+                <p class="text-gray-600 text-sm mb-4">
+                    Atualize as informações da lista
+                </p>
+
+                <form action="/api/lists/{listId}" method="PUT" class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="editTitle" class="block text-sm font-medium">Título</label>
+                        <input
+                            type="text"
+                            id="editTitle"
+                            name="title"
+                            value="Compras do mês"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label for="editDescription" class="block text-sm font-medium">Descrição</label>
+                        <textarea
+                            id="editDescription"
+                            name="description"
+                            rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        >Mercado mensal</textarea>
+                    </div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button
+                            type="button"
+                            onclick="closeEditListModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors"
+                        >
+                            Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Compartilhar Lista -->
+    <div id="shareModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h2 class="text-xl font-bold mb-2">Compartilhar Lista</h2>
+                <p class="text-gray-600 text-sm mb-4">
+                    Adicione colaboradores para editar esta lista
+                </p>
+
+                <form action="/api/lists/{listId}/collaborators" method="POST" class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="shareEmail" class="block text-sm font-medium">E-mail do colaborador</label>
+                        <div class="flex gap-2">
+                            <input
+                                type="email"
+                                id="shareEmail"
+                                name="email"
+                                placeholder="email@exemplo.com"
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                            <button
+                                type="submit"
+                                class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors"
+                            >
+                                Adicionar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de colaboradores -->
+                    <div class="mt-4">
+                        <h3 class="text-sm font-medium mb-2">Colaboradores</h3>
+                        <div id="collaboratorsList" class="space-y-2">
+                            <!-- Colaboradores serão listados aqui -->
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            onclick="closeShareModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Exclusão de Lista -->
+    <div id="deleteListModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-2">Excluir lista?</h2>
+            <p class="text-gray-600 mb-6">
+                Esta ação não pode ser desfeita. A lista e todos os itens serão permanentemente removidos.
+            </p>
+            <div class="flex gap-2 justify-end">
+                <button
+                    onclick="closeDeleteListModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                    Cancelar
+                </button>
+                <button
+                    onclick="deleteList()"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors"
+                >
+                    Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmar Exclusão de Item -->
+    <div id="deleteItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-2">Excluir item?</h2>
+            <p class="text-gray-600 mb-6">
+                Tem certeza que deseja excluir este item?
+            </p>
+            <div class="flex gap-2 justify-end">
+                <button
+                    onclick="closeDeleteItemModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                    Cancelar
+                </button>
+                <button
+                    onclick="deleteItem()"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors"
+                >
+                    Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDeleteItemId = null;
+
+        // Dropdown menu
+        function toggleMenu() {
+            const menu = document.getElementById('dropdownMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('dropdownMenu');
+            if (!e.target.closest('button[onclick="toggleMenu()"]') && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Modais
+        function openAddItemModal() {
+            document.getElementById('addItemModal').classList.remove('hidden');
+        }
+
+        function closeAddItemModal() {
+            document.getElementById('addItemModal').classList.add('hidden');
+        }
+
+        function openEditListModal() {
+            document.getElementById('editListModal').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.add('hidden');
+        }
+
+        function closeEditListModal() {
+            document.getElementById('editListModal').classList.add('hidden');
+        }
+
+        function openShareModal() {
+            document.getElementById('shareModal').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.add('hidden');
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('hidden');
+        }
+
+        function confirmDeleteList() {
+            document.getElementById('deleteListModal').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.add('hidden');
+        }
+
+        function closeDeleteListModal() {
+            document.getElementById('deleteListModal').classList.add('hidden');
+        }
+
+        function confirmDeleteItem(itemId) {
+            currentDeleteItemId = itemId;
+            document.getElementById('deleteItemModal').classList.remove('hidden');
+        }
+
+        function closeDeleteItemModal() {
+            document.getElementById('deleteItemModal').classList.add('hidden');
+            currentDeleteItemId = null;
+        }
+
+        // Ações (implementar com chamadas ao backend)
+        function goBack() {
+            window.location.href = '/balaio/listas';
+        }
+
+        function toggleItemStatus(itemId) {
+            // Fazer PUT para /api/lists/{listId}/items/{itemId}
+            console.log('Toggle status do item:', itemId);
+        }
+
+        function editItem(itemId) {
+            // Preencher modal com dados do item e abrir
+            console.log('Editar item:', itemId);
+        }
+
+        function deleteItem() {
+            // Fazer DELETE para /api/lists/{listId}/items/{currentDeleteItemId}
+            console.log('Deletar item:', currentDeleteItemId);
+            closeDeleteItemModal();
+        }
+
+        function deleteList() {
+            // Fazer DELETE para /api/lists/{listId}
+            console.log('Deletar lista');
+            window.location.href = 'dashboard.html';
+        }
+
+        // Fechar modais ao clicar fora
+        const modals = ['addItemModal', 'editListModal', 'shareModal', 'deleteListModal', 'deleteItemModal'];
+        modals.forEach(modalId => {
+            document.getElementById(modalId).addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
