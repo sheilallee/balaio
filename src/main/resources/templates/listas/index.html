@@ -15,17 +15,17 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div class="bg-white rounded-lg shadow p-6">
             <div class="text-sm text-gray-600 mb-2">Total de Listas</div>
-            <div class="text-3xl font-bold" id="totalLists">0</div>
+            <div class="text-3xl font-bold" id="totalLists">[[${listasResumo != null ? listasResumo.size() : 0}]]</div>
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
             <div class="text-sm text-gray-600 mb-2">Total Gasto</div>
-            <div class="text-3xl font-bold text-green-600" id="totalSpent">R$ 0,00</div>
+            <div class="text-3xl font-bold text-green-600" id="totalSpent">R$ [[${#numbers.formatDecimal(totalGastoGeral, 1, 2)}]]</div>
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
             <div class="text-sm text-gray-600 mb-2">Itens Comprados</div>
-            <div class="text-3xl font-bold" id="totalItems">0</div>
+            <div class="text-3xl font-bold" id="totalItems">[[${totalCompradoGeral}]]</div>
         </div>
     </div>
 
