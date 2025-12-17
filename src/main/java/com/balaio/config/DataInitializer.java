@@ -29,6 +29,19 @@ public class DataInitializer {
             } else {
                 System.out.println("Usuário admin já existe: " + adminEmail);
             }
+
+            String userEmail = "nirybrito@email.com";
+            if (!usuarioRepository.existsByEmail(userEmail)) {
+                Usuario user = new Usuario();
+                user.setEmail(userEmail);
+                user.setNomeCompleto("Nirielly Brito");
+                user.setSenha(passwordEncoder.encode("balaio123"));
+                user.setDataCriacao(LocalDateTime.now());
+                user.setDataAtualizacao(LocalDateTime.now());
+                usuarioRepository.save(user);
+                System.out.println("Usuário comum criado");
+            }
+
         };
     }
 }

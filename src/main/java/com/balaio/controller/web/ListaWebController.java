@@ -51,6 +51,10 @@ public class ListaWebController {
         List<Lista> listas = listaService.listarListasDoUsuario(usuario.getId());
 
         List<com.balaio.dto.ListaResumoDTO> listasResumo = new ArrayList<>();
+        long totalCompradoGeral = 0;
+        java.math.BigDecimal totalGastoGeral = java.math.BigDecimal.ZERO;
+        int totalItensGeral = 0;
+        
         for (Lista l : listas) {
             List<Item> itens = itemService.listarItensDaLista(l.getId(), usuario.getId());
             int totalItens = itens != null ? itens.size() : 0;
@@ -59,12 +63,33 @@ public class ListaWebController {
             listasResumo.add(new com.balaio.dto.ListaResumoDTO(
                     l.getId(), l.getTitulo(), l.getDescricao(), totalItens, totalComprados
             ));
+            
+            // Acumula totais gerais
+            totalItensGeral += totalItens;
+            totalCompradoGeral += totalComprados;
+            
+            // Calcula total gasto em itens comprados
+            if (itens != null) {
+                for (Item item : itens) {
+                    if (item.getStatus() == Item.StatusItem.COMPRADO && 
+                        item.getValor() != null && 
+                        item.getQuantidade() != null) {
+                        java.math.BigDecimal valorTotalItem = item.getValor().multiply(
+                            java.math.BigDecimal.valueOf(item.getQuantidade())
+                        );
+                        totalGastoGeral = totalGastoGeral.add(valorTotalItem);
+                    }
+                }
+            }
         }
 
         model.addAttribute("listasResumo", listasResumo);
         model.addAttribute("listas", listas);
         model.addAttribute("usuario", usuario);
         model.addAttribute("lista", new Lista());
+        model.addAttribute("totalCompradoGeral", totalCompradoGeral);
+        model.addAttribute("totalGastoGeral", totalGastoGeral);
+        model.addAttribute("totalItensGeral", totalItensGeral);
         return "listas/index";
     }
 
@@ -284,10 +309,8 @@ public class ListaWebController {
 
         try {
             Item item = itemService.buscarPorId(itemId).orElseThrow(() -> new RuntimeException("Item não encontrado"));
-            model.addAttribute("item", item);
-            model.addAttribute("listaId", listaId);
-            model.addAttribute("usuario", usuario);
-            return "listas/editarItem";
+            // Redireciona para a página de detalhes; edição é feita via modal nessa página
+            return "redirect:/balaio/listas/" + listaId;
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", "Erro: " + e.getMessage());
             return "redirect:/balaio/listas/" + listaId;

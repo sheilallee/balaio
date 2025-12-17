@@ -136,16 +136,30 @@
                         </div>
 
                         <div class="flex gap-1">
-                            <a th:href="@{'/balaio/listas/' + ${lista.id} + '/itens/' + ${item.id} + '/editar'}"
-                            class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                          <button
+                                type="button"
+                                onclick="openEditItemModal(this)"
+                                th:attr="
+                                    data-id=${item.id},
+                                    data-nome=${item.nomeProduto},
+                                    data-quantidade=${item.quantidade},
+                                    data-unidade=${item.unidade},
+                                    data-valor=${item.valor}
+                                "
+                                class="p-2 hover:bg-gray-100 rounded-md transition-colors">
                                 <i class="fas fa-pencil-alt text-sm"></i>
-                            </a>
+                            </button>
 
-                            <form th:action="@{'/balaio/listas/' + ${lista.id} + '/itens/' + ${item.id} + '/deletar'}" method="post">
-                                <button class="p-2 hover:bg-gray-100 rounded-md transition-colors">
-                                    <i class="fas fa-trash text-sm text-red-600"></i>
-                                </button>
-                            </form>
+                            <button
+                                type="button"
+                                onclick="confirmDeleteItem(this)"
+                                th:attr="
+                                    data-id=${item.id},
+                                    data-nome=${item.nomeProduto}
+                                "
+                                class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+                                <i class="fas fa-trash text-sm text-red-600"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -323,6 +337,90 @@
                             class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition-colors"
                         >
                             Adicionar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal: Editar Item -->
+    <div id="editItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h2 class="text-xl font-bold mb-2">Editar Item</h2>
+                <p class="text-gray-600 text-sm mb-4">
+                    Atualize as informações do item
+                </p>
+
+                <form id="editItemForm" method="POST" class="space-y-4">
+                    <input type="hidden" id="editItemId">
+
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium">Nome do produto</label>
+                        <input
+                            type="text"
+                            id="editItemName"
+                            name="nomeProduto"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Quantidade</label>
+                            <input
+                                type="number"
+                                id="editItemQuantity"
+                                name="quantidade"
+                                min="1"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500"
+                            />
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Unidade</label>
+                            <select
+                                id="editItemUnit"
+                                name="unidade"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500"
+                            >
+                                <option value="un">un</option>
+                                <option value="kg">kg</option>
+                                <option value="L">L</option>
+                                <option value="g">g</option>
+                                <option value="ml">ml</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium">Preço (R$)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            id="editItemPrice"
+                            name="valor"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500"
+                        />
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onclick="closeEditItemModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md"
+                        >
+                            Salvar
                         </button>
                     </div>
                 </form>
@@ -659,8 +757,10 @@
             document.getElementById('deleteListModal').classList.add('hidden');
         }
 
-        function confirmDeleteItem(itemId) {
-            currentDeleteItemId = itemId;
+        function confirmDeleteItem(button) {
+            const id = button.getAttribute('data-id');
+            const nome = button.getAttribute('data-nome');
+            currentDeleteItemId = id;
             document.getElementById('deleteItemModal').classList.remove('hidden');
         }
 
@@ -668,8 +768,32 @@
             document.getElementById('deleteItemModal').classList.add('hidden');
             currentDeleteItemId = null;
         }
+        
+        function openEditItemModal(button) {
+            const id = button.getAttribute('data-id');
+            const nome = button.getAttribute('data-nome');
+            const quantidade = button.getAttribute('data-quantidade');
+            const unidade = button.getAttribute('data-unidade');
+            const valor = button.getAttribute('data-valor');
 
-        // Ações (implementar com chamadas ao backend)
+            document.getElementById('editItemId').value = id;
+            document.getElementById('editItemName').value = nome || '';
+            document.getElementById('editItemQuantity').value = quantidade || '';
+            document.getElementById('editItemUnit').value = unidade || '';
+            document.getElementById('editItemPrice').value = valor || '';
+
+            const form = document.getElementById('editItemForm');
+            form.action = `/balaio/listas/[[${lista.id}]]/itens/${id}/editar`;
+
+            document.getElementById('editItemModal').classList.remove('hidden');
+        }
+
+        function closeEditItemModal() {
+            document.getElementById('editItemModal').classList.add('hidden');
+        }
+
+
+        // Ações 
         function goBack() {
             window.location.href = '/balaio/listas';
         }
@@ -685,8 +809,13 @@
         }
 
         function deleteItem() {
-            // Fazer DELETE para /api/lists/{listId}/items/{currentDeleteItemId}
-            console.log('Deletar item:', currentDeleteItemId);
+            if (currentDeleteItemId) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/balaio/listas/[[${lista.id}]]/itens/${currentDeleteItemId}/deletar`;
+                document.body.appendChild(form);
+                form.submit();
+            }
             closeDeleteItemModal();
         }
 
@@ -698,12 +827,13 @@
 
         // Fechar modais ao clicar fora
         const modals = [
-            'addItemModal', 
-            'editListModal', 
-            'shareModal', 
-            'deleteListModal', 
+            'addItemModal',
+            'editListModal',
+            'shareModal',
+            'deleteListModal',
             'deleteItemModal',
-            'confirmRemoveCollaboratorModal'  // ← ADICIONADO O NOVO MODAL
+            'confirmRemoveCollaboratorModal',
+            'editItemModal'
         ];
         
         modals.forEach(modalId => {
