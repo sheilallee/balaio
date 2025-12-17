@@ -142,6 +142,17 @@ public class UsuarioController {
         }
     }
 
+    @GetMapping("/listar")
+    public ResponseEntity<?> listarUsuarios() {
+        return ResponseEntity.ok(
+                usuarioService.listarTodos().stream().map(usuario -> Map.of(
+                        "id", usuario.getId(),
+                        "nome", usuario.getNomeCompleto(),
+                        "email", usuario.getEmail()
+                )).toList()
+        );
+    }
+
     private String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getName();
