@@ -59,9 +59,10 @@ public class ListaWebController {
             List<Item> itens = itemService.listarItensDaLista(l.getId(), usuario.getId());
             int totalItens = itens != null ? itens.size() : 0;
             int totalComprados = itens != null ? (int) itens.stream().filter(i -> i.getStatus() == Item.StatusItem.COMPRADO).count() : 0;
+            boolean isProprietario = l.getProprietario() != null && l.getProprietario().getId().equals(usuario.getId());
 
             listasResumo.add(new com.balaio.dto.ListaResumoDTO(
-                    l.getId(), l.getTitulo(), l.getDescricao(), totalItens, totalComprados
+                    l.getId(), l.getTitulo(), l.getDescricao(), totalItens, totalComprados, isProprietario
             ));
             
             // Acumula totais gerais

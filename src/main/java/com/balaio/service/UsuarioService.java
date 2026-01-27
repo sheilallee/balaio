@@ -63,6 +63,27 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
+        // CA2 - Validar nome (2-100 caracteres)
+        if (usuarioAtualizado.getNomeCompleto() == null || usuarioAtualizado.getNomeCompleto().trim().isEmpty()) {
+            throw new RuntimeException("Nome é obrigatório");
+        }
+        if (usuarioAtualizado.getNomeCompleto().length() < 2 || usuarioAtualizado.getNomeCompleto().length() > 100) {
+            throw new RuntimeException("Nome deve ter entre 2 e 100 caracteres");
+        }
+
+        // CA3 e CA6 - Validar email formato válido e se já está em uso por outro usuário
+        if (usuarioAtualizado.getEmail() == null || usuarioAtualizado.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("E-mail é obrigatório");
+        }
+        if (!usuarioAtualizado.getEmail().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            throw new RuntimeException("E-mail deve ter um formato válido");
+        }
+        // Verificar se o email já está em uso por outro usuário
+        Optional<Usuario> usuarioComEmail = usuarioRepository.findByEmail(usuarioAtualizado.getEmail());
+        if (usuarioComEmail.isPresent() && !usuarioComEmail.get().getId().equals(id)) {
+            throw new RuntimeException("E-mail já está em uso");
+        }
+
         usuario.setNomeCompleto(usuarioAtualizado.getNomeCompleto());
         usuario.setEmail(usuarioAtualizado.getEmail());
         usuario.setDataAtualizacao(LocalDateTime.now());

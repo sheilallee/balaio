@@ -43,35 +43,14 @@ public class AuthWebController {
     private static final Logger logger = LoggerFactory.getLogger(AuthWebController.class);
 
     @GetMapping("/login")
-    public String loginPage(Model model) {
+    public String loginPage(Model model, HttpSession session) {
+        // Se já está autenticado, redireciona para a home
+        Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
+        if (usuarioLogado != null) {
+            return "redirect:/balaio";
+        }
         model.addAttribute("loginDTO", new LoginDTO());
         return "auth/login";
-    }
-
-    @PostMapping("/login")
-    public String login(@Valid @ModelAttribute LoginDTO loginDTO, 
-                       HttpSession session, 
-                       RedirectAttributes redirectAttributes) {
-        try {
-            // Autenticação web: verificar existência do usuário e validar senha
-            Usuario usuario = usuarioService.buscarUsuarioPorEmail(loginDTO.getEmail());
-            if (usuario != null) {
-                // senha no banco está criptografada; usar PasswordEncoder.matches
-                if (passwordEncoder.matches(loginDTO.getSenha(), usuario.getSenha())) {
-                    session.setAttribute("usuarioLogado", usuario);
-                    return "redirect:/balaio/dashboard";
-                } else {
-                    redirectAttributes.addFlashAttribute("erro", "Email ou senha inválidos");
-                    return "redirect:/balaio/login";
-                }
-            } else {
-                redirectAttributes.addFlashAttribute("erro", "Email ou senha inválidos");
-                return "redirect:/balaio/login";
-            }
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", "Erro no login: " + e.getMessage());
-            return "redirect:/balaio/login";
-        }
     }
 
     @GetMapping("/cadastro")

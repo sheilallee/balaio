@@ -28,12 +28,18 @@
                             <i class="fas fa-pencil-alt text-sm"></i>
                             Editar lista
                         </button>
-                        <button onclick="openShareModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <!-- Apenas proprietário pode compartilhar -->
+                        <button th:if="${usuarioLogado != null and lista.proprietario?.id == usuarioLogado.id}" 
+                                onclick="openShareModal()" 
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
                             <i class="fas fa-share-alt text-sm"></i>
                             Compartilhar
                         </button>
-                        <hr class="my-1">
-                        <button onclick="confirmDeleteList()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-600">
+                        <hr th:if="${usuarioLogado != null and lista.proprietario?.id == usuarioLogado.id}" class="my-1">
+                        <!-- Apenas proprietário pode excluir -->
+                        <button th:if="${usuarioLogado != null and lista.proprietario?.id == usuarioLogado.id}" 
+                                onclick="confirmDeleteList()" 
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-600">
                             <i class="fas fa-trash text-sm"></i>
                             Excluir lista
                         </button>
@@ -449,14 +455,14 @@
                     Atualize as informações da lista
                 </p>
 
-                <form action="/api/lists/{listId}" method="PUT" class="space-y-4">
+                <form th:action="@{'/balaio/listas/' + ${lista.id} + '/editar'}" method="post" class="space-y-4">
                     <div class="space-y-2">
                         <label for="editTitle" class="block text-sm font-medium">Título</label>
                         <input
                             type="text"
                             id="editTitle"
-                            name="title"
-                            value="Compras do mês"
+                            name="titulo"
+                            th:value="${lista.titulo}"
                             required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                         />
@@ -466,10 +472,10 @@
                         <label for="editDescription" class="block text-sm font-medium">Descrição</label>
                         <textarea
                             id="editDescription"
-                            name="description"
+                            name="descricao"
                             rows="3"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >Mercado mensal</textarea>
+                        >[[${lista.descricao}]]</textarea>
                     </div>
 
                     <div class="flex gap-2 justify-end">
@@ -832,9 +838,11 @@
         }
 
         function deleteList() {
-            // Fazer DELETE para /api/lists/{listId}
-            console.log('Deletar lista');
-            window.location.href = 'dashboard.html';
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/balaio/listas/[[${lista.id}]]/deletar`;
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Fechar modais ao clicar fora

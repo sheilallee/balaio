@@ -81,10 +81,16 @@ public class UsuarioController {
             Usuario usuario = usuarioService.buscarPorEmail(email)
                     .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
+            // CA1 - Validar que nome e email foram fornecidos
+            if (!dados.containsKey("nome") || !dados.containsKey("email")) {
+                throw new RuntimeException("Nome e email são obrigatórios");
+            }
+
             Usuario usuarioAtualizado = new Usuario();
             usuarioAtualizado.setNomeCompleto(dados.get("nome"));
             usuarioAtualizado.setEmail(dados.get("email"));
 
+            // CA4 - Atualizar dados e dataAtualizacao
             Usuario usuarioSalvo = usuarioService.atualizarUsuario(usuario.getId(), usuarioAtualizado);
 
             Map<String, Object> response = new HashMap<>();

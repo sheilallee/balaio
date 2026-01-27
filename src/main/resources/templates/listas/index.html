@@ -146,8 +146,10 @@
                 </div>
 
                 <div class="flex justify-between items-center gap-2">
+                    <!-- Botão de excluir só aparece para o proprietário (verificado no JS) -->
                     <button type="button" id="globalOpenConfirmDelete"
-                            class="px-3 py-2 border border-red-400 text-red-600 rounded-md hover:bg-red-50">
+                            class="px-3 py-2 border border-red-400 text-red-600 rounded-md hover:bg-red-50"
+                            style="display: none;">
                         Excluir lista
                     </button>
 
@@ -201,10 +203,11 @@
     });
 
     function openGlobalEditModalFromButton(btn) {
-        // btn tem data-id, data-title, data-desc
+        // btn tem data-id, data-title, data-desc, data-is-owner
         const id = btn.getAttribute('data-id');
         const title = btn.getAttribute('data-title') || '';
         const desc = btn.getAttribute('data-desc') || '';
+        const isOwner = btn.getAttribute('data-is-owner') === 'true';
 
         document.getElementById('globalTitulo').value = title;
         document.getElementById('globalDescricao').value = desc;
@@ -212,8 +215,16 @@
         const form = document.getElementById('globalEditForm');
         form.action = `/balaio/listas/${id}/editar`;
 
-        document.getElementById('globalOpenConfirmDelete').setAttribute('data-id', id);
-        document.getElementById('globalOpenConfirmDelete').setAttribute('data-title', title);
+        const deleteBtn = document.getElementById('globalOpenConfirmDelete');
+        deleteBtn.setAttribute('data-id', id);
+        deleteBtn.setAttribute('data-title', title);
+        
+        // Mostrar botão de excluir apenas se for proprietário
+        if (isOwner) {
+            deleteBtn.style.display = 'block';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
 
         document.getElementById('globalEditModal').classList.remove('hidden');
     }

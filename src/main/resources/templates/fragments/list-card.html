@@ -13,7 +13,7 @@
                 type="button"
                 class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transform group-hover:translate-y-0 transition-opacity duration-200 p-2 rounded-full hover:bg-gray-100"
                 title="Editar lista"
-                th:attr="data-id=${resumo.id},data-title=${resumo.titulo},data-desc=${resumo.descricao}"
+                th:attr="data-id=${resumo.id},data-title=${resumo.titulo},data-desc=${resumo.descricao},data-is-owner=${resumo.proprietario}"
                 onclick="event.stopPropagation(); openGlobalEditModalFromButton(this);">
             <i class="fas fa-pen text-gray-600"></i>
         </button>
