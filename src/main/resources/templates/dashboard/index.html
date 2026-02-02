@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Balaio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div th:replace="~{fragments/header :: header(${usuario})}"></div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Título do Dashboard -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-chart-line text-amber-500 mr-3"></i>Dashboard
+            </h1>
+            <p class="text-gray-600">Visão geral dos seus gastos e listas</p>
+        </div>
+
+        <!-- Cards de Resumo -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Gasto Geral -->
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow-lg p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium opacity-90">Total Gasto</div>
+                    <i class="fas fa-wallet text-2xl opacity-80"></i>
+                </div>
+                <div class="text-3xl font-bold">
+                    <!-- CA3 - Formatação padrão brasileiro R$ 1.234,56 -->
+                    <span th:text="${#numbers.formatCurrency(dashboard.totalGastoGeral)}">R$ 0,00</span>
+                </div>
+                <div class="text-xs mt-2 opacity-80">
+                    Total de todas as listas
+                </div>
+            </div>
+
+            <!-- Quantidade de Listas -->
+            <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium text-gray-600">Listas</div>
+                    <i class="fas fa-list text-2xl text-blue-500"></i>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span th:text="${dashboard.quantidadeListas}">0</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">
+                    Listas criadas
+                </div>
+            </div>
+
+            <!-- Total de Itens -->
+            <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium text-gray-600">Itens</div>
+                    <i class="fas fa-shopping-cart text-2xl text-green-500"></i>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span th:text="${dashboard.totalItens}">0</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">
+                    Total de produtos
+                </div>
+            </div>
+
+            <!-- Itens Comprados -->
+            <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium text-gray-600">Comprados</div>
+                    <i class="fas fa-check-circle text-2xl text-purple-500"></i>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span th:text="${dashboard.totalItensComprados}">0</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">
+                    <span th:if="${dashboard.totalItens > 0}" 
+                          th:text="${#numbers.formatPercent(dashboard.totalItensComprados / dashboard.totalItens, 1, 0)}">0%</span>
+                    <span th:if="${dashboard.totalItens == 0}">0%</span>
+                    do total
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Gastos por Lista -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-800">
+                    <i class="fas fa-chart-bar text-amber-500 mr-2"></i>
+                    Gastos por Lista
+                </h2>
+                <a th:href="@{/balaio/listas}" 
+                   class="text-amber-600 hover:text-amber-700 text-sm font-medium">
+                    Ver todas as listas <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <!-- Lista de Gastos -->
+            <div th:if="${dashboard.listasComGastos != null and !dashboard.listasComGastos.isEmpty()}">
+                <div class="space-y-4">
+                    <!-- CA2 - Cada lista exibida com título e valor total individual -->
+                    <div th:each="lista : ${dashboard.listasComGastos}" 
+                         class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <h3 class="font-semibold text-gray-800" th:text="${lista.titulo}">Título da Lista</h3>
+                                    <span th:if="${lista.quantidadeItensComprados > 0}" 
+                                          class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                                        <i class="fas fa-check mr-1"></i>
+                                        <span th:text="${lista.quantidadeItensComprados}">0</span> comprados
+                                    </span>
+                                </div>
+                                
+                                <p th:if="${lista.descricao != null and !lista.descricao.isEmpty()}" 
+                                   class="text-sm text-gray-600 mb-2" 
+                                   th:text="${lista.descricao}">Descrição</p>
+                                
+                                <div class="flex items-center gap-4 text-sm text-gray-500">
+                                    <span>
+                                        <i class="fas fa-shopping-basket mr-1"></i>
+                                        <span th:text="${lista.quantidadeItens}">0</span> itens
+                                    </span>
+                                    <span th:if="${lista.quantidadeItens > 0}">
+                                        <i class="fas fa-chart-pie mr-1"></i>
+                                        <span th:text="${#numbers.formatPercent(lista.quantidadeItensComprados / lista.quantidadeItens, 1, 0)}">0%</span>
+                                        completo
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-right ml-4">
+                                <!-- CA3 - Formatação padrão brasileiro -->
+                                <div class="text-2xl font-bold text-amber-600">
+                                    <span th:text="${#numbers.formatCurrency(lista.totalGasto)}">R$ 0,00</span>
+                                </div>
+                                <a th:href="@{/balaio/listas/{id}(id=${lista.listaId})}" 
+                                   class="text-sm text-blue-600 hover:text-blue-700 mt-2 inline-block">
+                                    Ver detalhes <i class="fas fa-arrow-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Barra de Progresso -->
+                        <div th:if="${lista.quantidadeItens > 0}" class="mt-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full transition-all" 
+                                     th:style="'width: ' + ${lista.quantidadeItensComprados * 100 / lista.quantidadeItens} + '%'">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CA4 - Mensagem quando não há listas -->
+            <div th:if="${dashboard.listasComGastos == null or dashboard.listasComGastos.isEmpty()}" 
+                 class="text-center py-12">
+                <i class="fas fa-shopping-basket text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 mb-4">Você ainda não tem listas de compras</p>
+                <a th:href="@{/balaio/listas}" 
+                   class="inline-block bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Criar primeira lista
+                </a>
+            </div>
+        </div>
+
+        <!-- Gráfico de Distribuição de Gastos -->
+        <div th:if="${dashboard.listasComGastos != null and dashboard.listasComGastos.size() > 0}" 
+             class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-pie-chart text-amber-500 mr-2"></i>
+                Distribuição de Gastos
+            </h2>
+            <div class="relative" style="height: 300px;">
+                <canvas id="gastosChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Botão de Ação -->
+        <div class="mt-8 text-center">
+            <a th:href="@{/balaio/listas}" 
+               class="inline-block bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-lg transition-colors font-medium shadow-lg">
+                <i class="fas fa-list-ul mr-2"></i>Gerenciar Minhas Listas
+            </a>
+        </div>
+    </div>
+
+    <!-- Script para o gráfico -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', function() {
+            const listasComGastos = /*[[${dashboard.listasComGastos}]]*/ [];
+            
+            if (listasComGastos && listasComGastos.length > 0) {
+                const ctx = document.getElementById('gastosChart');
+                
+                const labels = listasComGastos.map(l => l.titulo);
+                const data = listasComGastos.map(l => l.totalGasto);
+                
+                // Cores para o gráfico
+                const backgroundColors = [
+                    'rgba(245, 158, 11, 0.8)',  // Amber
+                    'rgba(59, 130, 246, 0.8)',  // Blue
+                    'rgba(16, 185, 129, 0.8)',  // Green
+                    'rgba(139, 92, 246, 0.8)',  // Purple
+                    'rgba(239, 68, 68, 0.8)',   // Red
+                    'rgba(236, 72, 153, 0.8)',  // Pink
+                ];
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(context.parsed);
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>

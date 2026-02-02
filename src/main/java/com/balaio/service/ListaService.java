@@ -1,6 +1,8 @@
 package com.balaio.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.balaio.dto.DashboardDTO;
+import com.balaio.dto.ListaGastoDTO;
 import com.balaio.model.Item;
 import com.balaio.model.Lista;
 import com.balaio.model.Usuario;
@@ -182,5 +186,92 @@ public class ListaService {
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         return itemRepository.findByLista(lista);
+    }
+
+    /**
+     * CA1 - Calcular valor total de uma lista: SUM(valor × quantidade) apenas itens COMPRADOS
+     */
+    public BigDecimal calcularTotalGastoPorLista(Long listaId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        List<Item> itensComprados = itemRepository.findByListaIdAndStatus(listaId, Item.StatusItem.COMPRADO);
+        
+        BigDecimal total = BigDecimal.ZERO;
+        for (Item item : itensComprados) {
+            if (item.getValor() != null && item.getQuantidade() != null) {
+                BigDecimal valorItem = item.getValor().multiply(new BigDecimal(item.getQuantidade()));
+                total = total.add(valorItem);
+            }
+        }
+        
+        return total;
+    }
+
+    /**
+     * CA1 (usuário) - Calcular valor total gasto somando TODAS as listas do usuário
+     * CA2 - Considerar apenas itens com status COMPRADO
+     */
+    public BigDecimal calcularTotalGastoGeral(Long usuarioId) {
+        List<Lista> listas = listarListasDoUsuario(usuarioId);
+        
+        BigDecimal totalGeral = BigDecimal.ZERO;
+        for (Lista lista : listas) {
+            BigDecimal totalLista = calcularTotalGastoPorLista(lista.getId());
+            totalGeral = totalGeral.add(totalLista);
+        }
+        
+        return totalGeral;
+    }
+
+    /**
+     * Gerar dados completos para o dashboard
+     */
+    public DashboardDTO gerarDashboard(Long usuarioId) {
+        DashboardDTO dashboard = new DashboardDTO();
+        
+        // Buscar todas as listas do usuário
+        List<Lista> listas = listarListasDoUsuario(usuarioId);
+        
+        // CA - Quantidade de Listas
+        dashboard.setQuantidadeListas(listas.size());
+        
+        // Calcular gastos por lista
+        List<ListaGastoDTO> listasComGastos = new ArrayList<>();
+        BigDecimal totalGeralGasto = BigDecimal.ZERO;
+        int totalItensGeral = 0;
+        int totalItensCompradosGeral = 0;
+        
+        for (Lista lista : listas) {
+            ListaGastoDTO listaGasto = new ListaGastoDTO();
+            listaGasto.setListaId(lista.getId());
+            listaGasto.setTitulo(lista.getTitulo());
+            listaGasto.setDescricao(lista.getDescricao());
+            
+            // CA1 - Calcular total gasto da lista
+            BigDecimal totalLista = calcularTotalGastoPorLista(lista.getId());
+            listaGasto.setTotalGasto(totalLista);
+            
+            // Contar itens
+            List<Item> todosItens = itemRepository.findByListaId(lista.getId());
+            List<Item> itensComprados = itemRepository.findByListaIdAndStatus(lista.getId(), Item.StatusItem.COMPRADO);
+            
+            listaGasto.setQuantidadeItens(todosItens.size());
+            listaGasto.setQuantidadeItensComprados(itensComprados.size());
+            
+            listasComGastos.add(listaGasto);
+            
+            // Acumular para totais gerais
+            totalGeralGasto = totalGeralGasto.add(totalLista);
+            totalItensGeral += todosItens.size();
+            totalItensCompradosGeral += itensComprados.size();
+        }
+        
+        dashboard.setListasComGastos(listasComGastos);
+        dashboard.setTotalGastoGeral(totalGeralGasto);
+        dashboard.setTotalItens(totalItensGeral);
+        dashboard.setTotalItensComprados(totalItensCompradosGeral);
+        
+        return dashboard;
     }
 }

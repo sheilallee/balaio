@@ -24,12 +24,24 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <a th:href="@{/balaio/dashboard}"
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors"
+               title="Dashboard">
+                <i class="fas fa-chart-line text-gray-600"></i>
+            </a>
+            <a th:href="@{/balaio/listas}"
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors"
+               title="Minhas Listas">
+                <i class="fas fa-list text-gray-600"></i>
+            </a>
             <a th:href="@{/balaio/perfil}"
-               class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors"
+               title="Perfil">
                 <i class="fas fa-user text-gray-600"></i>
             </a>
             <a th:href="@{/balaio/logout}"
-               class="p-2 hover:bg-gray-100 rounded-md transition-colors">
+               class="p-2 hover:bg-gray-100 rounded-md transition-colors"
+               title="Sair">
                 <i class="fas fa-sign-out-alt text-gray-600"></i>
             </a>
         </div>

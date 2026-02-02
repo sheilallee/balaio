@@ -14,8 +14,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.balaio.dto.LoginDTO;
 import com.balaio.dto.UsuarioCadastroDTO;
-import com.balaio.model.Item;
-import com.balaio.model.Lista;
 import com.balaio.model.Usuario;
 import com.balaio.repository.ItemRepository;
 import com.balaio.service.ListaService;
@@ -84,48 +82,5 @@ public class AuthWebController {
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/balaio/login";
-    }
-
-    @GetMapping("/dashboard")
-    public String dashboard(HttpSession session, Model model) {
-        Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
-        if (usuario == null) {
-            return "redirect:/balaio/login";
-        }
-        model.addAttribute("usuario", usuario);
-
-        // Estatísticas: listas criadas, itens adicionados/comprados, listas compartilhadas
-        try {
-            java.util.List<Lista> listasCriadas = listaService.listarListasProprietario(usuario.getId());
-            int listasCriadasCount = listasCriadas != null ? listasCriadas.size() : 0;
-
-            long itensAdicionadosTotal = 0L;
-            long itensCompradosTotal = 0L;
-            if (listasCriadas != null) {
-                for (Lista l : listasCriadas) {
-                    if (l != null && l.getId() != null) {
-                        java.util.List<Item> itens = itemRepository.findByListaId(l.getId());
-                        itensAdicionadosTotal += itens != null ? itens.size() : 0;
-                        itensCompradosTotal += itemRepository.countByListaIdAndStatus(l.getId(), Item.StatusItem.COMPRADO);
-                    }
-                }
-            }
-
-            // Contar quantas listas deste usuário (como proprietário) foram compartilhadas com outros
-            long listasCompartilhadasCountLong = listaService.contarListasCompartilhadasPorProprietario(usuario.getId());
-            int listasCompartilhadasCount = (int) listasCompartilhadasCountLong;
-
-            model.addAttribute("listasCriadasCount", listasCriadasCount);
-            model.addAttribute("itensAdicionadosTotal", itensAdicionadosTotal);
-            model.addAttribute("itensCompradosTotal", itensCompradosTotal);
-            model.addAttribute("listasCompartilhadasCount", listasCompartilhadasCount);
-        } catch (Exception e) {
-            // Em caso de erro, expor zeros (não impedir a renderização do dashboard)
-            model.addAttribute("listasCriadasCount", 0);
-            model.addAttribute("itensAdicionadosTotal", 0);
-            model.addAttribute("itensCompradosTotal", 0);
-            model.addAttribute("listasCompartilhadasCount", 0);
-        }
-        return "redirect:/balaio/listas";
     }
 }
