@@ -70,11 +70,12 @@ public class AuthWebController {
         }
         try {
             usuarioService.cadastrarUsuario(usuarioCadastroDTO);
-            redirectAttributes.addFlashAttribute("sucesso", "Usuário cadastrado com sucesso! Faça login.");
+            // CA8 - Mensagem de sucesso conforme especificado
+            redirectAttributes.addFlashAttribute("sucesso", "Cadastro realizado com sucesso");
             return "redirect:/balaio/login";
         } catch (Exception e) {
             logger.error("Erro no cadastro de usuário", e);
-            redirectAttributes.addFlashAttribute("erro", "Erro no cadastro: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
             return "redirect:/balaio/cadastro";
         }
     }

@@ -25,18 +25,21 @@ public class UsuarioService {
     private PasswordEncoder passwordEncoder;
 
     public Usuario cadastrarUsuario(UsuarioCadastroDTO dto) {
+        // CA4 e CA7 - Verificar se o email já está cadastrado
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("E-mail já cadastrado");
         }
 
+        // CA5 - Verificar se as senhas coincidem
         if (!dto.getSenha().equals(dto.getConfirmarSenha())) {
-            throw new RuntimeException("Senhas não coincidem");
+            throw new RuntimeException("As senhas não coincidem");
         }
 
+        // CA8 - Criar usuário e criptografar senha
         Usuario usuario = new Usuario();
         usuario.setNomeCompleto(dto.getNomeCompleto());
         usuario.setEmail(dto.getEmail());
-        usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        usuario.setSenha(passwordEncoder.encode(dto.getSenha())); // Senha criptografada
         usuario.setDataCriacao(LocalDateTime.now());
         usuario.setDataAtualizacao(LocalDateTime.now());
 
