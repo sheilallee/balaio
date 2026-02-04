@@ -47,6 +47,14 @@ public class AuthWebController {
         if (usuarioLogado != null) {
             return "redirect:/balaio";
         }
+        
+        // Verificar se há erro de login na sessão
+        String loginError = (String) session.getAttribute("loginError");
+        if (loginError != null) {
+            model.addAttribute("erro", loginError);
+            session.removeAttribute("loginError"); // Remove após exibir
+        }
+        
         model.addAttribute("loginDTO", new LoginDTO());
         return "auth/login";
     }

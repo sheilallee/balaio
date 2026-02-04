@@ -53,7 +53,10 @@ public class SecurityConfig {
                 .usernameParameter("email")
                 .passwordParameter("senha")
                 .successHandler(customAuthenticationSuccessHandler)
-                .failureUrl("/balaio/login?error")
+                .failureHandler((request, response, exception) -> {
+                    request.getSession().setAttribute("loginError", "E-mail ou senha incorretos");
+                    response.sendRedirect("/balaio/login");
+                })
                 .permitAll()
             )
             .logout(logout -> logout
