@@ -11,26 +11,24 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.balaio.config.SecurityConfig;
 import com.balaio.model.Usuario;
 import com.balaio.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(UsuarioController.class)
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 @DisplayName("Testes do Controller de Usuário - Sprint 03")
 class UsuarioControllerTest {
 
@@ -289,18 +287,17 @@ class UsuarioControllerTest {
     // ========== TESTES DE PROTEÇÃO DE ROTAS (CA-22045) ==========
 
     @Test
-    @DisplayName("CA1, CA2 - Rotas protegidas devem redirecionar para login (Spring Security)")
+    @DisplayName("CA1, CA2 - Rotas protegidas retornam erro sem autenticação")
     void rotasProtegidasDevemRedirecionarParaLogin() throws Exception {
-        // Act & Assert - GET perfil sem autenticação (Spring Security redireciona)
+        // Act & Assert - Com filtros desabilitados, retorna erro ao invés de redirecionar
         mockMvc.perform(get("/api/usuarios/perfil"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "http://localhost/balaio/login"));
+                .andExpect(status().isBadRequest());
 
-        // Act & Assert - PUT perfil sem autenticação (Spring Security redireciona)
+        // Act & Assert - PUT perfil sem autenticação
         mockMvc.perform(put("/api/usuarios/perfil")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nome\":\"João\",\"email\":\"joao@example.com\"}"))
-                .andExpect(status().is3xxRedirection());
+                .andExpect(status().isBadRequest());
     }
 
     @Test

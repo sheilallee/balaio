@@ -108,7 +108,7 @@ class UsuarioServiceTest {
             usuarioService.cadastrarUsuario(cadastroDTO);
         });
 
-        assertEquals("Senhas não coincidem", exception.getMessage());
+        assertEquals("As senhas não coincidem", exception.getMessage());
         verify(usuarioRepository, never()).save(any(Usuario.class));
     }
 

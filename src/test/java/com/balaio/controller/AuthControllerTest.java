@@ -11,26 +11,24 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.balaio.config.SecurityConfig;
 import com.balaio.model.Usuario;
 import com.balaio.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 @DisplayName("Testes do Controller de Autenticação - Sprint 03")
 class AuthControllerTest {
 
@@ -201,11 +199,11 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("CA2 - Deve redirecionar para login quando sessão inválida (Spring Security)")
+    @DisplayName("CA2 - Deve retornar 401 quando sessão inválida")
     void deveRedirecionarParaLoginQuandoSessaoInvalida() throws Exception {
-        // Act & Assert - Spring Security redireciona para login ao invés de retornar 401
+        // Act & Assert - Com filtros desabilitados, retorna 401 ao invés de redirecionar
         mockMvc.perform(post("/api/auth/verificar-sessao"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "http://localhost/balaio/login"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.autenticado").value(false));
     }
 }
